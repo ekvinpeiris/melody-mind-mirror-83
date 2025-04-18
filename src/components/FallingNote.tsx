@@ -13,7 +13,7 @@ const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, p
   const [animationDuration, setAnimationDuration] = useState(0);
   
   useEffect(() => {
-    // Set a reasonable animation duration
+    // Set animation duration based on note duration
     setAnimationDuration(duration * 2);
   }, [duration]);
   
@@ -35,18 +35,17 @@ const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, p
   return (
     <div
       className={cn(
-        'absolute rounded-sm opacity-75',
+        'absolute rounded-sm opacity-75 falling-note',
         getColor(),
       )}
       style={{
         height: `${duration * 100}px`,
         width: isBlackKey ? '32px' : '56px',
         left: `${position - (isBlackKey ? 16 : 28)}px`, // Center the note over the key
-        top: 0,
-        animation: `fall-note ${animationDuration}s linear forwards`,
-        animationFillMode: 'forwards',
+        animationDuration: `${animationDuration}s`,
         zIndex: 5,
       }}
+      data-note={note}
     />
   );
 };
