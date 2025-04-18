@@ -94,6 +94,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         const note = key.getAttribute('data-note') || '';
         const rect = key.getBoundingClientRect();
         const keyboardRect = keyboardRef.current!.getBoundingClientRect();
+        // Get exact position of center of key
         const position = rect.left - keyboardRect.left + (rect.width / 2);
         positions[note] = position;
       });
@@ -110,6 +111,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         const now = Tone.Transport.seconds;
         const noteWindow = 4; // Show notes 4 seconds ahead
         
+        // Calculate which notes should be visible based on current time
         const currentVisibleNotes = fallingNotes.map(note => {
           const timeUntilNote = note.time - now;
           return {
@@ -168,7 +170,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         
         {/* Falling notes container */}
         <div className="absolute inset-0">
-          {visibleNotes.filter(note => note.visible).map((fallingNote) => {
+          {visibleNotes.filter(note => note.visible && keyPositions[note.note]).map((fallingNote) => {
             const isBlack = fallingNote.note.includes('#');
             return (
               <FallingNote
