@@ -1,9 +1,10 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "@/components/ui/sonner";
 import * as Tone from 'tone';
 import PianoKeyboard from '@/components/PianoKeyboard';
 import TopBar from '@/components/TopBar';
-import { parseMidiFile } from '@/utils/midiUtils';
+import { parseMidiFile, getAllNotes, normalizeNoteName } from '@/utils/midiUtils';
 
 interface FallingNote {
   id: string;
@@ -21,6 +22,7 @@ const Index = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const midiSequence = useRef<Tone.Part | null>(null);
+  const notesRef = useRef<FallingNote[]>([]);
 
   // Handle play/pause
   const handlePlayPause = async () => {
