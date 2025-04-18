@@ -14,10 +14,10 @@ git init
 git add .
 
 # Create an initial commit
-git commit -m "Initial commit of MidiPlayer project"
+git commit -m "Initial commit of Melody Mind Mirror project"
 
-# Add the remote repository
-git remote add origin https://github.com/ekvinpeiris/MidiPlayer.git
+# Add the remote repository (REPLACE THIS WITH YOUR GITHUB REPOSITORY URL)
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPOSITORY_NAME.git
 
 # Push the code to GitHub, forcing it to use the main branch
 git push -u origin main --force
