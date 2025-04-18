@@ -39,29 +39,39 @@ const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
     const noteWidth = isBlackKey ? 32 : 56; // Match PianoKey widths
     const xPosition = position - (noteWidth / 2); // Center the note over the key
 
-    // Determine if the note is about to be hit (within 150ms)
-    const isAboutToHit = timeUntilHit !== undefined && timeUntilHit <= 0.15 && timeUntilHit > -0.1;
+    // More precise hit window calculation - when note is exactly at the key position
+    const hitWindow = 0.12; // 120ms hit window - more precise
+    const isAboutToHit = timeUntilHit !== undefined && 
+                         timeUntilHit <= hitWindow && 
+                         timeUntilHit > -hitWindow;
+
+    // Add pulsing effect when note is in the hit window
+    const isPerfectHit = timeUntilHit !== undefined && 
+                         Math.abs(timeUntilHit) < 0.05; // 50ms perfect hit window
 
     return (
       <div
         ref={ref}
         className={cn(
-          'rounded-sm opacity-75 falling-note',
+          'rounded-sm opacity-80 falling-note',
           getColor(),
           isActive && 'note-hit',
-          isAboutToHit && 'border-2 border-white'
+          isAboutToHit && 'border-2 border-white',
+          isPerfectHit && 'perfect-hit'
         )}
         style={{
           height: `${duration * 100}px`,
           width: `${noteWidth}px`,
           left: `${xPosition}px`,
           animationDuration: `${animationDuration}s`,
-          zIndex: isBlackKey ? 10 : 5, // Ensure black key notes appear above white key notes
+          zIndex: isBlackKey ? 10 : 5,
           animationDelay: '2s', // Keep the 2-second delay to sync with MIDI playback
-          willChange: 'transform', // Optimize animation performance
+          willChange: 'transform'
         }}
         data-note={note}
         data-time-until-hit={timeUntilHit?.toFixed(3)}
+        data-hit-window={hitWindow.toFixed(3)}
+        data-is-hit-window={isAboutToHit ? 'true' : 'false'}
       />
     );
   }

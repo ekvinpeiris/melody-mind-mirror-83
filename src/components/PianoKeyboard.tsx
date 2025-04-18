@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import PianoKey from './PianoKey';
 import FallingNote from './FallingNote';
 import * as Tone from 'tone';
@@ -41,6 +41,10 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   const [keyPositions, setKeyPositions] = useState<Record<string, number>>({});
   const [visibleNotes, setVisibleNotes] = useState<VisibleNote[]>([]);
   const [hitStatus, setHitStatus] = useState<Record<string, boolean>>({});
+  const [perfectHits, setPerfectHits] = useState<Record<string, boolean>>({});
+  
+  // Track the last update time to ensure consistent animation
+  const lastUpdateTimeRef = useRef<number>(0);
   
   // Initialize synth with piano samples
   useEffect(() => {
@@ -109,91 +113,151 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     }
   }, []);
   
-  // Check if any notes are being hit
-  const checkNoteHits = () => {
+  // More precise note hit detection logic
+  const checkNoteHits = useCallback(() => {
     if (!isPlaying) return;
     
     const now = Tone.Transport.seconds;
-    const hitWindow = 0.15; // 150ms hit window
-    const newHitStatus: Record<string, boolean> = {};
+    const hitWindow = 0.12; // 120ms hit window - narrower for more precision
+    const perfectHitWindow = 0.05; // 50ms perfect hit window
     
+    const newHitStatus: Record<string, boolean> = {};
+    const newPerfectHits: Record<string, boolean> = {};
+    
+    // First, clear any notes that are no longer in the hit window
     visibleNotes.forEach(note => {
       const timeUntilHit = note.time - now;
-      // Note is being hit if it's within the hit window and the corresponding key is active
-      if (Math.abs(timeUntilHit) < hitWindow && activeNotes.includes(note.note)) {
-        newHitStatus[note.id] = true;
-        console.log(`HIT! Note ${note.note} hit at time: ${timeUntilHit.toFixed(3)}`);
+      
+      if (Math.abs(timeUntilHit) <= hitWindow) {
+        // Only consider notes in the hit window for active status
+        if (activeNotes.includes(note.note)) {
+          newHitStatus[note.id] = true;
+          
+          // Check for perfect hit
+          if (Math.abs(timeUntilHit) <= perfectHitWindow) {
+            newPerfectHits[note.note] = true;
+            // Only log perfect hits
+            console.log(`PERFECT HIT! Note ${note.note} hit at time: ${timeUntilHit.toFixed(3)}`);
+          }
+        }
       }
     });
     
+    // Update the state once with all changes
     setHitStatus(newHitStatus);
-  };
+    setPerfectHits(newPerfectHits);
+  }, [isPlaying, visibleNotes, activeNotes]);
   
-  // Update visible notes based on current playback
+  // Update visible notes based on current playback with optimized performance
   useEffect(() => {
     // Process visible notes when either isPlaying changes or fallingNotes changes
     const updateVisibleNotes = () => {
       if (isPlaying && fallingNotes.length > 0) {
         const now = Tone.Transport.seconds;
-        const noteWindow = 6; // Show notes 6 seconds ahead - increased to account for 2s delay
+        const noteWindow = 6; // Show notes 6 seconds ahead
         
         // Calculate which notes should be visible based on current time
-        const currentVisibleNotes: VisibleNote[] = fallingNotes.map(note => {
-          const timeUntilNote = note.time - now;
-          const shouldBeVisible = timeUntilNote < noteWindow && timeUntilNote > -note.duration;
-          
-          return {
-            ...note,
-            visible: shouldBeVisible,
-            timeUntilHit: timeUntilNote
-          };
-        });
+        const currentVisibleNotes: VisibleNote[] = fallingNotes
+          .filter(note => {
+            const timeUntilNote = note.time - now;
+            // Only process notes that are coming up soon or just passed
+            return timeUntilNote < noteWindow && timeUntilNote > -note.duration - 0.2;
+          })
+          .map(note => {
+            const timeUntilNote = note.time - now;
+            return {
+              ...note,
+              visible: true, // We've already filtered, so all are visible
+              timeUntilHit: timeUntilNote
+            };
+          });
         
         setVisibleNotes(currentVisibleNotes);
       } else if (!isPlaying) {
         // Clear visible notes when stopped
         setVisibleNotes([]);
+        setHitStatus({});
+        setPerfectHits({});
       }
     };
     
     updateVisibleNotes();
     
-    // Update visible notes more frequently while playing for smoother visualization
-    const interval = isPlaying ? setInterval(() => {
-      updateVisibleNotes();
-      checkNoteHits(); // Also check for note hits on each update
-    }, 16) : null; // 60fps for maximum smoothness
+    // Use requestAnimationFrame for better performance and visual synchronization
+    let frameId: number | null = null;
+    let previousTimestamp = 0;
+    
+    const animate = (timestamp: number) => {
+      if (!previousTimestamp || timestamp - previousTimestamp >= 16) { // ~60fps
+        updateVisibleNotes();
+        checkNoteHits();
+        previousTimestamp = timestamp;
+      }
+      frameId = requestAnimationFrame(animate);
+    };
+    
+    if (isPlaying) {
+      frameId = requestAnimationFrame(animate);
+    }
     
     return () => {
-      if (interval) clearInterval(interval);
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
     };
-  }, [isPlaying, fallingNotes, activeNotes]);
+  }, [isPlaying, fallingNotes, activeNotes, checkNoteHits]);
   
   const playNote = (note: string) => {
     if (synth.current) {
       // Use the proper method to trigger the note
       synth.current.triggerAttackRelease(note, "8n");
       
-      // For debug - log when note is played manually
-      console.log(`Key pressed: ${note}`);
-      
-      // Check if this manual key press hits any falling notes
+      // For manual key presses, check against all visible notes for potential hits
       const now = Tone.Transport.seconds;
-      const hitWindow = 0.15; // 150ms hit window
+      const hitWindow = 0.12; // 120ms hit window
+      const perfectHitWindow = 0.05; // 50ms perfect hit window
+      
+      let foundHit = false;
+      let foundPerfectHit = false;
       
       visibleNotes.forEach(fallingNote => {
         if (fallingNote.note === note) {
           const timeUntilHit = fallingNote.time - now;
-          if (Math.abs(timeUntilHit) < hitWindow) {
-            console.log(`Manual hit! Note ${note} hit at time: ${timeUntilHit.toFixed(3)}`);
+          
+          if (Math.abs(timeUntilHit) <= hitWindow) {
+            foundHit = true;
+            
             // Update hit status for this note
             setHitStatus(prev => ({
               ...prev,
               [fallingNote.id]: true
             }));
+            
+            // Check for perfect hit
+            if (Math.abs(timeUntilHit) <= perfectHitWindow) {
+              foundPerfectHit = true;
+              // Update perfect hit status for this note
+              setPerfectHits(prev => ({
+                ...prev,
+                [note]: true
+              }));
+              
+              console.log(`PERFECT MANUAL HIT! Note ${note} hit at time: ${timeUntilHit.toFixed(3)}`);
+            } else {
+              console.log(`Manual hit! Note ${note} hit at time: ${timeUntilHit.toFixed(3)}`);
+            }
           }
         }
       });
+      
+      // If no hit was found, clear the perfect hit status for this note
+      if (!foundPerfectHit) {
+        setPerfectHits(prev => {
+          const newState = { ...prev };
+          delete newState[note];
+          return newState;
+        });
+      }
     }
   };
   
@@ -244,7 +308,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
             .filter(note => note.visible && keyPositions[note.note]) // Only show notes with valid positions
             .map((fallingNote) => {
               const isBlack = fallingNote.note.includes('#');
-              const isActive = hitStatus[fallingNote.id] || activeNotes.includes(fallingNote.note);
+              const isActive = hitStatus[fallingNote.id];
               
               return (
                 <FallingNote
@@ -277,6 +341,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
               isPlaying={activeNotes.includes(id)}
               onClick={() => playNote(id)}
               keyPosition={index}
+              isPerfectHit={perfectHits[id]}
             />
           ))}
         </div>
