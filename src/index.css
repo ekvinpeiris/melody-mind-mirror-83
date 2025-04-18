@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -87,8 +88,8 @@
     opacity: 0.8;
   }
   100% {
-    transform: translateY(calc(100vh - 192px));
-    opacity: 0;
+    transform: translateY(calc(100vh - 192px)); /* Position precisely at piano keys */
+    opacity: 1; /* Make more visible at the end for better hit feedback */
   }
 }
 
@@ -108,6 +109,7 @@
   }
   50% {
     transform: translateY(2px);
+    background: rgba(59, 130, 246, 0.8); /* Highlight pressed keys more visibly */
   }
   100% {
     transform: translateY(0);

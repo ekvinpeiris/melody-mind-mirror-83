@@ -114,10 +114,16 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         // Calculate which notes should be visible based on current time
         const currentVisibleNotes = fallingNotes.map(note => {
           const timeUntilNote = note.time - now;
-          // Show notes that are coming up in the next 6 seconds and haven't finished playing yet
+          const shouldBeVisible = timeUntilNote < noteWindow && timeUntilNote > -note.duration;
+          
+          // Add extra debug info
+          if (shouldBeVisible) {
+            console.log(`Note ${note.note} visible: time until hit: ${timeUntilNote.toFixed(2)}s`);
+          }
+          
           return {
             ...note,
-            visible: timeUntilNote < noteWindow && timeUntilNote > -note.duration
+            visible: shouldBeVisible
           };
         });
         
@@ -131,7 +137,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     updateVisibleNotes();
     
     // Update visible notes more frequently while playing for smoother visualization
-    const interval = isPlaying ? setInterval(updateVisibleNotes, 33) : null; // ~30fps for smoother updates
+    const interval = isPlaying ? setInterval(updateVisibleNotes, 16) : null; // 60fps for maximum smoothness
     
     return () => {
       if (interval) clearInterval(interval);
@@ -142,6 +148,9 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     if (synth.current) {
       // Use the proper method to trigger the note
       synth.current.triggerAttackRelease(note, "8n");
+      
+      // For debug - log when note is played manually
+      console.log(`Key pressed: ${note}`);
     }
   };
   
@@ -178,6 +187,9 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
             .filter(note => note.visible && keyPositions[note.note]) // Only show notes with valid positions
             .map((fallingNote) => {
               const isBlack = fallingNote.note.includes('#');
+              const isActive = activeNotes.includes(fallingNote.note);
+              
+              // Add a class to highlight notes currently being played
               return (
                 <FallingNote
                   key={fallingNote.id}
