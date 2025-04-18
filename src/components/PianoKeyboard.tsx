@@ -27,15 +27,48 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   const synth = useRef<Tone.Sampler | null>(null);
   const keyboardRef = useRef<HTMLDivElement>(null);
   const [keyPositions, setKeyPositions] = useState<Record<string, number>>({});
+  const [visibleNotes, setVisibleNotes] = useState<Array<{
+    id: string;
+    note: string;
+    duration: number;
+    time: number;
+    visible: boolean;
+  }>>([]);
   
-  // Initialize synth
+  // Initialize synth with piano samples
   useEffect(() => {
     const sampler = new Tone.Sampler({
       urls: {
+        A0: "A0.mp3",
+        C1: "C1.mp3",
+        "D#1": "Ds1.mp3",
+        "F#1": "Fs1.mp3",
+        A1: "A1.mp3",
+        C2: "C2.mp3",
+        "D#2": "Ds2.mp3",
+        "F#2": "Fs2.mp3",
+        A2: "A2.mp3",
+        C3: "C3.mp3",
+        "D#3": "Ds3.mp3",
+        "F#3": "Fs3.mp3",
+        A3: "A3.mp3",
         C4: "C4.mp3",
         "D#4": "Ds4.mp3",
         "F#4": "Fs4.mp3",
         A4: "A4.mp3",
+        C5: "C5.mp3",
+        "D#5": "Ds5.mp3",
+        "F#5": "Fs5.mp3",
+        A5: "A5.mp3",
+        C6: "C6.mp3",
+        "D#6": "Ds6.mp3",
+        "F#6": "Fs6.mp3",
+        A6: "A6.mp3",
+        C7: "C7.mp3",
+        "D#7": "Ds7.mp3",
+        "F#7": "Fs7.mp3",
+        A7: "A7.mp3",
+        C8: "C8.mp3"
       },
       release: 1,
       baseUrl: "https://tonejs.github.io/audio/salamander/",
@@ -57,7 +90,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       const keys = keyboardRef.current.querySelectorAll('[data-position]');
       
       keys.forEach((key) => {
-        const note = key.textContent?.trim() || '';
+        const note = key.getAttribute('data-note') || '';
         const rect = key.getBoundingClientRect();
         const keyboardRect = keyboardRef.current!.getBoundingClientRect();
         const position = rect.left - keyboardRect.left + (rect.width / 2);
@@ -67,6 +100,48 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       setKeyPositions(positions);
     }
   }, []);
+  
+  // Update visible notes based on current playback
+  useEffect(() => {
+    if (isPlaying && fallingNotes.length > 0) {
+      // Process notes for visibility based on current time
+      const now = Tone.Transport.seconds;
+      const noteWindow = 4; // Show notes 4 seconds ahead
+      
+      const currentVisibleNotes = fallingNotes.map(note => {
+        const timeUntilNote = note.time - now;
+        return {
+          ...note,
+          visible: timeUntilNote < noteWindow && timeUntilNote > -note.duration
+        };
+      });
+      
+      setVisibleNotes(currentVisibleNotes);
+    } else {
+      setVisibleNotes([]);
+    }
+    
+    // Update visible notes every 100ms while playing
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        const now = Tone.Transport.seconds;
+        const noteWindow = 4; // Show notes 4 seconds ahead
+        
+        setVisibleNotes(fallingNotes.map(note => {
+          const timeUntilNote = note.time - now;
+          return {
+            ...note,
+            visible: timeUntilNote < noteWindow && timeUntilNote > -note.duration
+          };
+        }));
+      }, 100);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isPlaying, fallingNotes]);
   
   const playNote = (note: string) => {
     if (synth.current) {
@@ -102,7 +177,8 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
               <div key={i} className="border-t border-white w-full" />
             ))}
           </div>
-          {isPlaying && fallingNotes.map((fallingNote) => {
+          
+          {visibleNotes.filter(note => note.visible).map((fallingNote) => {
             const isBlack = fallingNote.note.includes('#');
             return (
               <FallingNote

@@ -20,6 +20,7 @@ const PianoKey: React.FC<PianoKeyProps> = ({
   return (
     <div
       data-position={keyPosition}
+      data-note={note}
       className={cn(
         'relative cursor-pointer transition-colors duration-100',
         isBlackKey 

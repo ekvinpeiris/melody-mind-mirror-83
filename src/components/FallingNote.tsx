@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 type FallingNoteProps = {
@@ -10,6 +10,13 @@ type FallingNoteProps = {
 };
 
 const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, position }) => {
+  const [animationDuration, setAnimationDuration] = useState(0);
+  
+  useEffect(() => {
+    // Slow down the animation by a factor of 2 to make it more visible
+    setAnimationDuration(duration * 2);
+  }, [duration]);
+  
   const getColor = () => {
     if (isBlackKey) return 'bg-orange-400';
     const noteName = note.charAt(0);
@@ -28,16 +35,16 @@ const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, p
   return (
     <div
       className={cn(
-        'absolute rounded-sm transition-transform',
+        'absolute rounded-sm',
         getColor(),
         'opacity-75'
       )}
       style={{
         height: `${duration * 100}px`,
         width: isBlackKey ? '32px' : '56px',
-        left: `${position}px`,
-        animation: `fall ${duration}s linear`,
-        transform: 'translateY(-100%)',
+        left: `${position - (isBlackKey ? 16 : 28)}px`, // Center the note over the key
+        bottom: 0,
+        animation: `fall ${animationDuration}s linear`,
         animationFillMode: 'forwards',
       }}
     >

@@ -23,6 +23,56 @@ const Index = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const midiSequence = useRef<Tone.Part | null>(null);
   const notesRef = useRef<FallingNote[]>([]);
+  const pianoSampler = useRef<Tone.Sampler | null>(null);
+
+  // Initialize piano sampler
+  useEffect(() => {
+    // Create a piano sampler
+    const sampler = new Tone.Sampler({
+      urls: {
+        A0: "A0.mp3",
+        C1: "C1.mp3",
+        "D#1": "Ds1.mp3",
+        "F#1": "Fs1.mp3",
+        A1: "A1.mp3",
+        C2: "C2.mp3",
+        "D#2": "Ds2.mp3",
+        "F#2": "Fs2.mp3",
+        A2: "A2.mp3",
+        C3: "C3.mp3",
+        "D#3": "Ds3.mp3",
+        "F#3": "Fs3.mp3",
+        A3: "A3.mp3",
+        C4: "C4.mp3",
+        "D#4": "Ds4.mp3",
+        "F#4": "Fs4.mp3",
+        A4: "A4.mp3",
+        C5: "C5.mp3",
+        "D#5": "Ds5.mp3",
+        "F#5": "Fs5.mp3",
+        A5: "A5.mp3",
+        C6: "C6.mp3",
+        "D#6": "Ds6.mp3",
+        "F#6": "Fs6.mp3",
+        A6: "A6.mp3",
+        C7: "C7.mp3",
+        "D#7": "Ds7.mp3",
+        "F#7": "Fs7.mp3",
+        A7: "A7.mp3",
+        C8: "C8.mp3"
+      },
+      release: 1,
+      baseUrl: "https://tonejs.github.io/audio/salamander/",
+    }).toDestination();
+    
+    pianoSampler.current = sampler;
+    
+    return () => {
+      if (pianoSampler.current) {
+        pianoSampler.current.dispose();
+      }
+    };
+  }, []);
 
   // Handle play/pause
   const handlePlayPause = async () => {
@@ -62,33 +112,35 @@ const Index = () => {
     ];
 
     // Add the demo notes for visualization
-    setFallingNotes(demoNotes.map((note, index) => ({
+    notesRef.current = demoNotes.map((note, index) => ({
       id: `demo-${index}`,
       note: note.note,
       duration: note.duration,
       time: note.time
-    })));
+    }));
+    
+    setFallingNotes(notesRef.current);
 
     // Create a Tone.js sequence to play the notes
-    const synth = new Tone.PolySynth(Tone.Synth).toDestination();
-    
-    midiSequence.current = new Tone.Part((time, note) => {
-      synth.triggerAttackRelease(note.note, note.duration, time);
-      
-      // Update active notes for highlighting on the keyboard
-      Tone.Draw.schedule(() => {
-        setActiveNotes(prev => [...prev, note.note]);
+    if (pianoSampler.current) {
+      midiSequence.current = new Tone.Part((time, note) => {
+        pianoSampler.current?.triggerAttackRelease(note.note, note.duration, time);
         
-        // Remove the note after its duration
-        setTimeout(() => {
-          setActiveNotes(prev => prev.filter(n => n !== note.note));
-        }, note.duration * 1000);
-      }, time);
-    }, demoNotes).start(0);
-    
-    // Loop the pattern
-    midiSequence.current.loop = true;
-    midiSequence.current.loopEnd = 4;
+        // Update active notes for highlighting on the keyboard
+        Tone.Draw.schedule(() => {
+          setActiveNotes(prev => [...prev, note.note]);
+          
+          // Remove the note after its duration
+          setTimeout(() => {
+            setActiveNotes(prev => prev.filter(n => n !== note.note));
+          }, note.duration * 1000);
+        }, time);
+      }, demoNotes).start(0);
+      
+      // Loop the pattern
+      midiSequence.current.loop = true;
+      midiSequence.current.loopEnd = 4;
+    }
   };
 
   // Handle stop
@@ -99,7 +151,6 @@ const Index = () => {
     }
     setIsPlaying(false);
     setActiveNotes([]);
-    setFallingNotes([]);
   };
 
   // Handle MIDI file upload
@@ -129,29 +180,29 @@ const Index = () => {
       setFallingNotes(convertedNotes);
       
       // Create a Tone.js sequence
-      const synth = new Tone.PolySynth(Tone.Synth).toDestination();
-      
       if (midiSequence.current) {
         midiSequence.current.dispose();
       }
       
-      midiSequence.current = new Tone.Part((time, note) => {
-        synth.triggerAttackRelease(note.note, note.duration, time);
-        
-        // Update active notes for highlighting on the keyboard
-        Tone.Draw.schedule(() => {
-          setActiveNotes(prev => [...prev, note.note]);
+      if (pianoSampler.current) {
+        midiSequence.current = new Tone.Part((time, note) => {
+          pianoSampler.current?.triggerAttackRelease(note.note, note.duration, time);
           
-          // Remove the note after its duration
-          setTimeout(() => {
-            setActiveNotes(prev => prev.filter(n => n !== note.note));
-          }, note.duration * 1000);
-        }, time);
-      }, convertedNotes.map(note => ({
-        time: note.time,
-        note: note.note,
-        duration: note.duration
-      }))).start(0);
+          // Update active notes for highlighting on the keyboard
+          Tone.Draw.schedule(() => {
+            setActiveNotes(prev => [...prev, note.note]);
+            
+            // Remove the note after its duration
+            setTimeout(() => {
+              setActiveNotes(prev => prev.filter(n => n !== note.note));
+            }, note.duration * 1000);
+          }, time);
+        }, convertedNotes.map(note => ({
+          time: note.time,
+          note: note.note,
+          duration: note.duration
+        }))).start(0);
+      }
       
       setMidiLoaded(true);
       toast.success(`MIDI file "${parsedMidi.name}" loaded successfully!`);
