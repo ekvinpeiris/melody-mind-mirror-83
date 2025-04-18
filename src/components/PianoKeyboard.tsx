@@ -18,23 +18,29 @@ type PianoKeyboardProps = {
   isPlaying?: boolean;
 };
 
+type VisibleNote = {
+  id: string;
+  note: string;
+  duration: number;
+  time: number;
+  visible: boolean;
+  timeUntilHit: number;
+};
+
 const PianoKeyboard: React.FC<PianoKeyboardProps> = ({ 
   activeNotes = [], 
   fallingNotes = [],
   isPlaying = false
 }) => {
-  // Use a more specific type that works with both Synth and Sampler
   const synth = useRef<Tone.Sampler | null>(null);
   const keyboardRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<HTMLDivElement>(null);
+  const keyRefs = useRef<Record<string, HTMLDivElement>>({});
+  const noteRefs = useRef<Record<string, HTMLDivElement>>({});
+  
   const [keyPositions, setKeyPositions] = useState<Record<string, number>>({});
-  const [visibleNotes, setVisibleNotes] = useState<Array<{
-    id: string;
-    note: string;
-    duration: number;
-    time: number;
-    visible: boolean;
-  }>>([]);
+  const [visibleNotes, setVisibleNotes] = useState<VisibleNote[]>([]);
+  const [hitStatus, setHitStatus] = useState<Record<string, boolean>>({});
   
   // Initialize synth with piano samples
   useEffect(() => {
@@ -103,6 +109,26 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     }
   }, []);
   
+  // Check if any notes are being hit
+  const checkNoteHits = () => {
+    if (!isPlaying) return;
+    
+    const now = Tone.Transport.seconds;
+    const hitWindow = 0.15; // 150ms hit window
+    const newHitStatus: Record<string, boolean> = {};
+    
+    visibleNotes.forEach(note => {
+      const timeUntilHit = note.time - now;
+      // Note is being hit if it's within the hit window and the corresponding key is active
+      if (Math.abs(timeUntilHit) < hitWindow && activeNotes.includes(note.note)) {
+        newHitStatus[note.id] = true;
+        console.log(`HIT! Note ${note.note} hit at time: ${timeUntilHit.toFixed(3)}`);
+      }
+    });
+    
+    setHitStatus(newHitStatus);
+  };
+  
   // Update visible notes based on current playback
   useEffect(() => {
     // Process visible notes when either isPlaying changes or fallingNotes changes
@@ -112,18 +138,14 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         const noteWindow = 6; // Show notes 6 seconds ahead - increased to account for 2s delay
         
         // Calculate which notes should be visible based on current time
-        const currentVisibleNotes = fallingNotes.map(note => {
+        const currentVisibleNotes: VisibleNote[] = fallingNotes.map(note => {
           const timeUntilNote = note.time - now;
           const shouldBeVisible = timeUntilNote < noteWindow && timeUntilNote > -note.duration;
           
-          // Add extra debug info
-          if (shouldBeVisible) {
-            console.log(`Note ${note.note} visible: time until hit: ${timeUntilNote.toFixed(2)}s`);
-          }
-          
           return {
             ...note,
-            visible: shouldBeVisible
+            visible: shouldBeVisible,
+            timeUntilHit: timeUntilNote
           };
         });
         
@@ -137,12 +159,15 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     updateVisibleNotes();
     
     // Update visible notes more frequently while playing for smoother visualization
-    const interval = isPlaying ? setInterval(updateVisibleNotes, 16) : null; // 60fps for maximum smoothness
+    const interval = isPlaying ? setInterval(() => {
+      updateVisibleNotes();
+      checkNoteHits(); // Also check for note hits on each update
+    }, 16) : null; // 60fps for maximum smoothness
     
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isPlaying, fallingNotes]);
+  }, [isPlaying, fallingNotes, activeNotes]);
   
   const playNote = (note: string) => {
     if (synth.current) {
@@ -151,6 +176,24 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       
       // For debug - log when note is played manually
       console.log(`Key pressed: ${note}`);
+      
+      // Check if this manual key press hits any falling notes
+      const now = Tone.Transport.seconds;
+      const hitWindow = 0.15; // 150ms hit window
+      
+      visibleNotes.forEach(fallingNote => {
+        if (fallingNote.note === note) {
+          const timeUntilHit = fallingNote.time - now;
+          if (Math.abs(timeUntilHit) < hitWindow) {
+            console.log(`Manual hit! Note ${note} hit at time: ${timeUntilHit.toFixed(3)}`);
+            // Update hit status for this note
+            setHitStatus(prev => ({
+              ...prev,
+              [fallingNote.id]: true
+            }));
+          }
+        }
+      });
     }
   };
   
@@ -163,6 +206,20 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       }))
     );
   }, []);
+  
+  // Store references to piano keys
+  const setKeyRef = (element: HTMLDivElement | null, noteId: string) => {
+    if (element) {
+      keyRefs.current[noteId] = element;
+    }
+  };
+  
+  // Store references to falling notes
+  const setNoteRef = (element: HTMLDivElement | null, noteId: string) => {
+    if (element) {
+      noteRefs.current[noteId] = element;
+    }
+  };
   
   return (
     <div className="fixed inset-0 bg-gray-900 flex flex-col">
@@ -187,16 +244,18 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
             .filter(note => note.visible && keyPositions[note.note]) // Only show notes with valid positions
             .map((fallingNote) => {
               const isBlack = fallingNote.note.includes('#');
-              const isActive = activeNotes.includes(fallingNote.note);
+              const isActive = hitStatus[fallingNote.id] || activeNotes.includes(fallingNote.note);
               
-              // Add a class to highlight notes currently being played
               return (
                 <FallingNote
                   key={fallingNote.id}
+                  ref={(el) => setNoteRef(el, fallingNote.id)}
                   note={fallingNote.note}
                   isBlackKey={isBlack}
                   duration={fallingNote.duration}
                   position={keyPositions[fallingNote.note] || 0}
+                  isActive={isActive}
+                  timeUntilHit={fallingNote.timeUntilHit}
                 />
               );
           })}
@@ -212,6 +271,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
           {allNotes.map(({ id, isBlackKey }, index) => (
             <PianoKey
               key={id}
+              ref={(el) => setKeyRef(el as HTMLDivElement, id)}
               note={id}
               isBlackKey={isBlackKey}
               isPlaying={activeNotes.includes(id)}

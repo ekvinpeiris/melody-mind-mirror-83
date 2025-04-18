@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
 type PianoKeyProps = {
@@ -7,18 +7,19 @@ type PianoKeyProps = {
   isBlackKey: boolean;
   isPlaying: boolean;
   onClick: () => void;
-  keyPosition: number; // Add position information for falling notes
+  keyPosition: number;
 };
 
-const PianoKey: React.FC<PianoKeyProps> = ({ 
+const PianoKey = forwardRef<HTMLDivElement, PianoKeyProps>(({ 
   note, 
   isBlackKey, 
   isPlaying, 
   onClick,
   keyPosition
-}) => {
+}, ref) => {
   return (
     <div
+      ref={ref}
       data-position={keyPosition}
       data-note={note}
       className={cn(
@@ -45,6 +46,8 @@ const PianoKey: React.FC<PianoKeyProps> = ({
       )}
     </div>
   );
-};
+});
+
+PianoKey.displayName = 'PianoKey';
 
 export default PianoKey;
