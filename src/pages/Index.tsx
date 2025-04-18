@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "@/components/ui/sonner";
 import * as Tone from 'tone';
@@ -11,6 +12,9 @@ interface FallingNote {
   duration: number;
   time: number;
 }
+
+// Global consistent delay for both audio and visuals
+const GLOBAL_START_DELAY = 0.5;
 
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -79,7 +83,8 @@ const Index = () => {
     if (isPlaying) {
       Tone.Transport.pause();
     } else {
-      Tone.Transport.start();
+      // Start transport with consistent global delay
+      Tone.Transport.start(`+${GLOBAL_START_DELAY}`);
       
       if (!midiLoaded && !midiSequence.current) {
         playDemoPattern();
@@ -93,16 +98,15 @@ const Index = () => {
       midiSequence.current.dispose();
     }
 
-    const startDelay = 5;
     const demoNotes = [
-      { note: 'C4', time: startDelay + 0, duration: 0.5 },
-      { note: 'D4', time: startDelay + 0.5, duration: 0.5 },
-      { note: 'E4', time: startDelay + 1, duration: 0.5 },
-      { note: 'F4', time: startDelay + 1.5, duration: 0.5 },
-      { note: 'G4', time: startDelay + 2, duration: 0.5 },
-      { note: 'A4', time: startDelay + 2.5, duration: 0.5 },
-      { note: 'B4', time: startDelay + 3, duration: 0.5 },
-      { note: 'C5', time: startDelay + 3.5, duration: 0.5 },
+      { note: 'C4', time: GLOBAL_START_DELAY + 0, duration: 0.5 },
+      { note: 'D4', time: GLOBAL_START_DELAY + 0.5, duration: 0.5 },
+      { note: 'E4', time: GLOBAL_START_DELAY + 1, duration: 0.5 },
+      { note: 'F4', time: GLOBAL_START_DELAY + 1.5, duration: 0.5 },
+      { note: 'G4', time: GLOBAL_START_DELAY + 2, duration: 0.5 },
+      { note: 'A4', time: GLOBAL_START_DELAY + 2.5, duration: 0.5 },
+      { note: 'B4', time: GLOBAL_START_DELAY + 3, duration: 0.5 },
+      { note: 'C5', time: GLOBAL_START_DELAY + 3.5, duration: 0.5 },
     ];
 
     notesRef.current = demoNotes.map((note, index) => ({
@@ -128,7 +132,7 @@ const Index = () => {
       }, demoNotes).start(0);
       
       midiSequence.current.loop = true;
-      midiSequence.current.loopEnd = startDelay + 4;
+      midiSequence.current.loopEnd = GLOBAL_START_DELAY + 4;
     }
   };
 
@@ -153,12 +157,11 @@ const Index = () => {
       
       const allNotes = getAllNotes(parsedMidi);
       
-      const startDelay = 5;
       const convertedNotes = allNotes.map((note, index) => ({
         id: `midi-${index}`,
         note: normalizeNoteName(note.name),
         duration: note.duration,
-        time: note.time + startDelay
+        time: note.time + GLOBAL_START_DELAY // Use consistent global delay
       }));
       
       notesRef.current = convertedNotes;
