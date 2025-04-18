@@ -94,7 +94,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         const note = key.getAttribute('data-note') || '';
         const rect = key.getBoundingClientRect();
         const keyboardRect = keyboardRef.current!.getBoundingClientRect();
-        // Get exact position of center of key
+        // Calculate the center of the key for precise positioning
         const position = rect.left - keyboardRect.left + (rect.width / 2);
         positions[note] = position;
       });
@@ -109,11 +109,12 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     const updateVisibleNotes = () => {
       if (isPlaying && fallingNotes.length > 0) {
         const now = Tone.Transport.seconds;
-        const noteWindow = 4; // Show notes 4 seconds ahead
+        const noteWindow = 4; // Show notes 4 seconds ahead - matches animation duration
         
         // Calculate which notes should be visible based on current time
         const currentVisibleNotes = fallingNotes.map(note => {
           const timeUntilNote = note.time - now;
+          // Show notes that are coming up in the next 4 seconds and haven't finished playing yet
           return {
             ...note,
             visible: timeUntilNote < noteWindow && timeUntilNote > -note.duration
@@ -121,13 +122,16 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         });
         
         setVisibleNotes(currentVisibleNotes);
+      } else if (!isPlaying) {
+        // Clear visible notes when stopped
+        setVisibleNotes([]);
       }
     };
     
     updateVisibleNotes();
     
-    // Update visible notes every 100ms while playing
-    const interval = isPlaying ? setInterval(updateVisibleNotes, 100) : null;
+    // Update visible notes frequently while playing for smoother visualization
+    const interval = isPlaying ? setInterval(updateVisibleNotes, 50) : null;
     
     return () => {
       if (interval) clearInterval(interval);
@@ -170,17 +174,19 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         
         {/* Falling notes container */}
         <div className="absolute inset-0">
-          {visibleNotes.filter(note => note.visible && keyPositions[note.note]).map((fallingNote) => {
-            const isBlack = fallingNote.note.includes('#');
-            return (
-              <FallingNote
-                key={fallingNote.id}
-                note={fallingNote.note}
-                isBlackKey={isBlack}
-                duration={fallingNote.duration}
-                position={keyPositions[fallingNote.note] || 0}
-              />
-            );
+          {visibleNotes
+            .filter(note => note.visible && keyPositions[note.note]) // Only show notes with valid positions
+            .map((fallingNote) => {
+              const isBlack = fallingNote.note.includes('#');
+              return (
+                <FallingNote
+                  key={fallingNote.id}
+                  note={fallingNote.note}
+                  isBlackKey={isBlack}
+                  duration={fallingNote.duration}
+                  position={keyPositions[fallingNote.note] || 0}
+                />
+              );
           })}
         </div>
       </div>
