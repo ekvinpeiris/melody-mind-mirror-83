@@ -13,8 +13,10 @@ const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, p
   const [animationDuration, setAnimationDuration] = useState(0);
   
   useEffect(() => {
-    // Set animation duration based on note duration
-    setAnimationDuration(duration * 2);
+    // Adjust animation duration based on when the note should be played
+    // Shorter duration = faster fall, longer = slower fall
+    // Use a consistent speed to ensure visual consistency
+    setAnimationDuration(4); // Fixed 4 second fall time for all notes for better predictability
   }, [duration]);
   
   const getColor = () => {
@@ -32,6 +34,10 @@ const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, p
     }
   };
 
+  // Calculate the width and offset based on the key type
+  const noteWidth = isBlackKey ? 32 : 56; // Match PianoKey widths
+  const xPosition = position - (noteWidth / 2); // Center the note over the key
+
   return (
     <div
       className={cn(
@@ -40,10 +46,11 @@ const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, p
       )}
       style={{
         height: `${duration * 100}px`,
-        width: isBlackKey ? '32px' : '56px',
-        left: `${position - (isBlackKey ? 16 : 28)}px`, // Center the note over the key
+        width: `${noteWidth}px`,
+        left: `${xPosition}px`,
         animationDuration: `${animationDuration}s`,
-        zIndex: 5,
+        zIndex: isBlackKey ? 10 : 5, // Ensure black key notes appear above white key notes
+        animationDelay: '0s', // Ensure no delay in animation start
       }}
       data-note={note}
     />
