@@ -79,7 +79,7 @@ const Index = () => {
     if (isPlaying) {
       Tone.Transport.pause();
     } else {
-      Tone.Transport.start("+0.5");
+      Tone.Transport.start();
       
       if (!midiLoaded && !midiSequence.current) {
         playDemoPattern();
@@ -154,7 +154,7 @@ const Index = () => {
       const allNotes = getAllNotes(parsedMidi);
       
       const startDelay = 5;
-      const convertedNotes: FallingNote[] = allNotes.map((note, index) => ({
+      const convertedNotes = allNotes.map((note, index) => ({
         id: `midi-${index}`,
         note: normalizeNoteName(note.name),
         duration: note.duration,
