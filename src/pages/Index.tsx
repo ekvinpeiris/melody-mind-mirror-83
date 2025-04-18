@@ -1,12 +1,9 @@
-
 import React, { useEffect, useRef, useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/sonner";
 import * as Tone from 'tone';
 import PianoKeyboard from '@/components/PianoKeyboard';
-import { Play, Pause, Square, Upload, Music } from 'lucide-react';
-import { parseMidiFile, getAllNotes, normalizeNoteName } from '@/utils/midiUtils';
+import TopBar from '@/components/TopBar';
+import { parseMidiFile } from '@/utils/midiUtils';
 
 interface FallingNote {
   id: string;
@@ -17,7 +14,6 @@ interface FallingNote {
 
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [tempo, setTempo] = useState(120);
   const [activeNotes, setActiveNotes] = useState<string[]>([]);
   const [fallingNotes, setFallingNotes] = useState<FallingNote[]>([]);
   const [midiLoaded, setMidiLoaded] = useState(false);
@@ -25,18 +21,6 @@ const Index = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const midiSequence = useRef<Tone.Part | null>(null);
-  const notesRef = useRef<FallingNote[]>([]);
-
-  // Effect to update Tone.js transport tempo
-  useEffect(() => {
-    Tone.Transport.bpm.value = tempo;
-    return () => {
-      Tone.Transport.stop();
-      if (midiSequence.current) {
-        midiSequence.current.dispose();
-      }
-    };
-  }, [tempo]);
 
   // Handle play/pause
   const handlePlayPause = async () => {
@@ -49,11 +33,7 @@ const Index = () => {
     } else {
       Tone.Transport.start();
       
-      // If we have midi loaded, don't need to do anything else
-      if (midiLoaded && midiSequence.current) {
-        // Already handled by the MIDI sequence
-      } else {
-        // Simple demo pattern if no MIDI is loaded
+      if (!midiLoaded && !midiSequence.current) {
         playDemoPattern();
       }
     }
@@ -129,7 +109,6 @@ const Index = () => {
       // Reset state
       handleStop();
       
-      // Parse the MIDI file
       const parsedMidi = await parseMidiFile(file);
       setMidiName(parsedMidi.name);
       
@@ -182,79 +161,34 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
-      <h1 className="text-3xl font-bold mb-8">Melody Mind Mirror</h1>
+    <div className="min-h-screen bg-gray-900">
+      <TopBar
+        isPlaying={isPlaying}
+        onPlayPause={handlePlayPause}
+        onStop={handleStop}
+        onFileClick={() => fileInputRef.current?.click()}
+        midiName={midiName}
+      />
       
-      <div className="w-full max-w-3xl bg-gray-800 p-6 rounded-lg shadow-lg">
-        {/* Piano visualization area */}
-        <div className="h-60 bg-gray-700 rounded mb-4 overflow-hidden relative">
-          <PianoKeyboard 
-            activeNotes={activeNotes} 
-            fallingNotes={fallingNotes}
-            isPlaying={isPlaying} 
-          />
-        </div>
-        
-        {/* Controls */}
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <div className="flex gap-2">
-              <Button 
-                onClick={handlePlayPause}
-                variant="default"
-                size="icon"
-                className="bg-blue-500 hover:bg-blue-600"
-              >
-                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </Button>
-              
-              <Button 
-                onClick={handleStop}
-                variant="secondary"
-                size="icon"
-              >
-                <Square className="h-4 w-4" />
-              </Button>
-
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                className="flex gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                Upload MIDI
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".mid,.midi"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-
-              {midiLoaded && midiName && (
-                <div className="flex items-center gap-2 ml-2 px-3 py-1 bg-gray-700 rounded text-sm">
-                  <Music className="h-4 w-4" />
-                  <span className="truncate max-w-[120px]">{midiName}</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <span className="text-sm">Tempo: {tempo} BPM</span>
-              <div className="w-40">
-                <Slider
-                  value={[tempo]}
-                  min={40}
-                  max={240}
-                  step={1}
-                  onValueChange={(value) => setTempo(value[0])}
-                />
-              </div>
-            </div>
+      <div className="pt-16">
+        <div className="w-full max-w-7xl mx-auto p-4">
+          <div className="w-full bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <PianoKeyboard 
+              activeNotes={activeNotes} 
+              fallingNotes={fallingNotes}
+              isPlaying={isPlaying} 
+            />
           </div>
         </div>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".mid,.midi"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
     </div>
   );
 };
