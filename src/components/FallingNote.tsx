@@ -22,6 +22,8 @@ const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, p
         left: `${position}px`,
         animation: `fall ${duration}s linear`,
         opacity: 0.8,
+        transform: 'translateY(-100%)',
+        animationFillMode: 'forwards',
       }}
     />
   );
