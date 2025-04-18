@@ -109,12 +109,12 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     const updateVisibleNotes = () => {
       if (isPlaying && fallingNotes.length > 0) {
         const now = Tone.Transport.seconds;
-        const noteWindow = 4; // Show notes 4 seconds ahead - matches animation duration
+        const noteWindow = 6; // Show notes 6 seconds ahead - increased to account for 2s delay
         
         // Calculate which notes should be visible based on current time
         const currentVisibleNotes = fallingNotes.map(note => {
           const timeUntilNote = note.time - now;
-          // Show notes that are coming up in the next 4 seconds and haven't finished playing yet
+          // Show notes that are coming up in the next 6 seconds and haven't finished playing yet
           return {
             ...note,
             visible: timeUntilNote < noteWindow && timeUntilNote > -note.duration
@@ -130,8 +130,8 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     
     updateVisibleNotes();
     
-    // Update visible notes frequently while playing for smoother visualization
-    const interval = isPlaying ? setInterval(updateVisibleNotes, 50) : null;
+    // Update visible notes more frequently while playing for smoother visualization
+    const interval = isPlaying ? setInterval(updateVisibleNotes, 33) : null; // ~30fps for smoother updates
     
     return () => {
       if (interval) clearInterval(interval);

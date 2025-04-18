@@ -13,10 +13,8 @@ const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, p
   const [animationDuration, setAnimationDuration] = useState(0);
   
   useEffect(() => {
-    // Adjust animation duration based on when the note should be played
-    // Shorter duration = faster fall, longer = slower fall
-    // Use a consistent speed to ensure visual consistency
-    setAnimationDuration(4); // Fixed 4 second fall time for all notes for better predictability
+    // Using a consistent 4-second animation but with adjusted timing
+    setAnimationDuration(4); 
   }, [duration]);
   
   const getColor = () => {
@@ -50,7 +48,7 @@ const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, p
         left: `${xPosition}px`,
         animationDuration: `${animationDuration}s`,
         zIndex: isBlackKey ? 10 : 5, // Ensure black key notes appear above white key notes
-        animationDelay: '0s', // Ensure no delay in animation start
+        animationDelay: '2s', // Add a delay to sync with MIDI playback
       }}
       data-note={note}
     />
