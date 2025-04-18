@@ -13,8 +13,8 @@ type FallingNoteProps = {
 
 const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
   ({ note, isBlackKey, duration, position, isActive, timeUntilHit }, ref) => {
-    // Fixed animation duration for better predictability
-    const animationDuration = 4;
+    // Increased animation duration for better visibility
+    const animationDuration = 5; // 5 seconds gives more time to see and prepare
     
     const getColor = () => {
       if (isBlackKey) return 'bg-orange-400';
@@ -36,7 +36,7 @@ const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
     const xPosition = position - (noteWidth / 2); // Center the note over the key
 
     // More precise hit window calculation - when note is exactly at the key position
-    const hitWindow = 0.15; // 150ms hit window - more forgiving
+    const hitWindow = 0.15; // 150ms hit window
     const isAboutToHit = timeUntilHit !== undefined && 
                          timeUntilHit <= hitWindow && 
                          timeUntilHit > -hitWindow;
@@ -61,7 +61,8 @@ const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
           left: `${xPosition}px`,
           animationDuration: `${animationDuration}s`,
           zIndex: isBlackKey ? 10 : 5,
-          animationDelay: '2s', // Keep the 2-second delay to sync with MIDI playback
+          // Remove animation delay to synchronize with playback
+          animationDelay: '0s',
           willChange: 'transform'
         }}
         data-note={note}

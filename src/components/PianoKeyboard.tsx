@@ -191,12 +191,13 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       
       if (isPlayingRef.current && fallingNotesRef.current.length > 0) {
         const now = Tone.Transport.seconds;
-        const noteWindow = 6; // Show notes 6 seconds ahead
+        const noteWindow = 6; // Show notes 6 seconds ahead - synchronized with fall animation duration
         
         // Calculate which notes should be visible
         const currentVisibleNotes: VisibleNote[] = fallingNotesRef.current
           .filter(note => {
             const timeUntilNote = note.time - now;
+            // Adjusted time window for better visibility
             return timeUntilNote < noteWindow && timeUntilNote > -note.duration - 0.3;
           })
           .map(note => {
@@ -211,7 +212,13 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         // Only update if there's a change to avoid rerenders
         setVisibleNotes(prev => {
           if (prev.length !== currentVisibleNotes.length) return currentVisibleNotes;
-          return currentVisibleNotes;
+          
+          // Check if any timeUntilHit values have changed significantly
+          const hasSignificantChanges = currentVisibleNotes.some((note, index) => {
+            return !prev[index] || Math.abs(note.timeUntilHit - prev[index].timeUntilHit) > 0.1;
+          });
+          
+          return hasSignificantChanges ? currentVisibleNotes : prev;
         });
         
         // Check for hit notes

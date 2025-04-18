@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "@/components/ui/sonner";
 import * as Tone from 'tone';
@@ -25,9 +24,7 @@ const Index = () => {
   const notesRef = useRef<FallingNote[]>([]);
   const pianoSampler = useRef<Tone.Sampler | null>(null);
 
-  // Initialize piano sampler
   useEffect(() => {
-    // Create a piano sampler
     const sampler = new Tone.Sampler({
       urls: {
         A0: "A0.mp3",
@@ -74,7 +71,6 @@ const Index = () => {
     };
   }, []);
 
-  // Handle play/pause
   const handlePlayPause = async () => {
     if (Tone.context.state !== 'running') {
       await Tone.start();
@@ -83,7 +79,7 @@ const Index = () => {
     if (isPlaying) {
       Tone.Transport.pause();
     } else {
-      Tone.Transport.start();
+      Tone.Transport.start("+0.5");
       
       if (!midiLoaded && !midiSequence.current) {
         playDemoPattern();
@@ -92,26 +88,23 @@ const Index = () => {
     setIsPlaying(!isPlaying);
   };
 
-  // Play a simple demo pattern if no MIDI is loaded
   const playDemoPattern = () => {
-    // Clear any existing sequence
     if (midiSequence.current) {
       midiSequence.current.dispose();
     }
 
-    // Create a simple C major scale
+    const startDelay = 5;
     const demoNotes = [
-      { note: 'C4', time: 0, duration: 0.5 },
-      { note: 'D4', time: 0.5, duration: 0.5 },
-      { note: 'E4', time: 1, duration: 0.5 },
-      { note: 'F4', time: 1.5, duration: 0.5 },
-      { note: 'G4', time: 2, duration: 0.5 },
-      { note: 'A4', time: 2.5, duration: 0.5 },
-      { note: 'B4', time: 3, duration: 0.5 },
-      { note: 'C5', time: 3.5, duration: 0.5 },
+      { note: 'C4', time: startDelay + 0, duration: 0.5 },
+      { note: 'D4', time: startDelay + 0.5, duration: 0.5 },
+      { note: 'E4', time: startDelay + 1, duration: 0.5 },
+      { note: 'F4', time: startDelay + 1.5, duration: 0.5 },
+      { note: 'G4', time: startDelay + 2, duration: 0.5 },
+      { note: 'A4', time: startDelay + 2.5, duration: 0.5 },
+      { note: 'B4', time: startDelay + 3, duration: 0.5 },
+      { note: 'C5', time: startDelay + 3.5, duration: 0.5 },
     ];
 
-    // Add the demo notes for visualization
     notesRef.current = demoNotes.map((note, index) => ({
       id: `demo-${index}`,
       note: note.note,
@@ -121,29 +114,24 @@ const Index = () => {
     
     setFallingNotes(notesRef.current);
 
-    // Create a Tone.js sequence to play the notes
     if (pianoSampler.current) {
       midiSequence.current = new Tone.Part((time, note) => {
         pianoSampler.current?.triggerAttackRelease(note.note, note.duration, time);
         
-        // Update active notes for highlighting on the keyboard
         Tone.Draw.schedule(() => {
           setActiveNotes(prev => [...prev, note.note]);
           
-          // Remove the note after its duration
           setTimeout(() => {
             setActiveNotes(prev => prev.filter(n => n !== note.note));
           }, note.duration * 1000);
         }, time);
       }, demoNotes).start(0);
       
-      // Loop the pattern
       midiSequence.current.loop = true;
-      midiSequence.current.loopEnd = 4;
+      midiSequence.current.loopEnd = startDelay + 4;
     }
   };
 
-  // Handle stop
   const handleStop = () => {
     Tone.Transport.stop();
     if (midiSequence.current) {
@@ -153,33 +141,29 @@ const Index = () => {
     setActiveNotes([]);
   };
 
-  // Handle MIDI file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     
     try {
-      // Reset state
       handleStop();
       
       const parsedMidi = await parseMidiFile(file);
       setMidiName(parsedMidi.name);
       
-      // Get all notes from all tracks
       const allNotes = getAllNotes(parsedMidi);
       
-      // Convert to our format and update state
+      const startDelay = 5;
       const convertedNotes: FallingNote[] = allNotes.map((note, index) => ({
         id: `midi-${index}`,
         note: normalizeNoteName(note.name),
         duration: note.duration,
-        time: note.time
+        time: note.time + startDelay
       }));
       
       notesRef.current = convertedNotes;
       setFallingNotes(convertedNotes);
       
-      // Create a Tone.js sequence
       if (midiSequence.current) {
         midiSequence.current.dispose();
       }
@@ -188,11 +172,9 @@ const Index = () => {
         midiSequence.current = new Tone.Part((time, note) => {
           pianoSampler.current?.triggerAttackRelease(note.note, note.duration, time);
           
-          // Update active notes for highlighting on the keyboard
           Tone.Draw.schedule(() => {
             setActiveNotes(prev => [...prev, note.note]);
             
-            // Remove the note after its duration
             setTimeout(() => {
               setActiveNotes(prev => prev.filter(n => n !== note.note));
             }, note.duration * 1000);
