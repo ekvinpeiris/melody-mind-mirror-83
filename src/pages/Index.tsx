@@ -1,10 +1,10 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from "@/components/ui/sonner";
 import * as Tone from 'tone';
 import PianoKeyboard from '@/components/PianoKeyboard';
 import TopBar from '@/components/TopBar';
 import { parseMidiFile, getAllNotes, normalizeNoteName } from '@/utils/midiUtils';
+import { generateProceduralMidiNotes } from '@/utils/midiNoteGenerator';
 
 interface FallingNote {
   id: string;
@@ -75,45 +75,18 @@ const Index = () => {
     };
   }, []);
 
-  const handlePlayPause = async () => {
-    if (Tone.context.state !== 'running') {
-      await Tone.start();
-    }
-    
-    if (isPlaying) {
-      Tone.Transport.pause();
-    } else {
-      // Start transport with consistent global delay
-      Tone.Transport.start(`+${GLOBAL_START_DELAY}`);
-      
-      if (!midiLoaded && !midiSequence.current) {
-        playDemoPattern();
-      }
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const playDemoPattern = () => {
+  const playProceduralPattern = () => {
     if (midiSequence.current) {
       midiSequence.current.dispose();
     }
 
-    const demoNotes = [
-      { note: 'C4', time: GLOBAL_START_DELAY + 0, duration: 0.5 },
-      { note: 'D4', time: GLOBAL_START_DELAY + 0.5, duration: 0.5 },
-      { note: 'E4', time: GLOBAL_START_DELAY + 1, duration: 0.5 },
-      { note: 'F4', time: GLOBAL_START_DELAY + 1.5, duration: 0.5 },
-      { note: 'G4', time: GLOBAL_START_DELAY + 2, duration: 0.5 },
-      { note: 'A4', time: GLOBAL_START_DELAY + 2.5, duration: 0.5 },
-      { note: 'B4', time: GLOBAL_START_DELAY + 3, duration: 0.5 },
-      { note: 'C5', time: GLOBAL_START_DELAY + 3.5, duration: 0.5 },
-    ];
-
-    notesRef.current = demoNotes.map((note, index) => ({
-      id: `demo-${index}`,
-      note: note.note,
+    const proceduralNotes = generateProceduralMidiNotes();
+    
+    notesRef.current = proceduralNotes.map((note, index) => ({
+      id: `procedural-${index}`,
+      note: note.name,
       duration: note.duration,
-      time: note.time
+      time: note.time + GLOBAL_START_DELAY
     }));
     
     setFallingNotes(notesRef.current);
@@ -129,11 +102,33 @@ const Index = () => {
             setActiveNotes(prev => prev.filter(n => n !== note.note));
           }, note.duration * 1000);
         }, time);
-      }, demoNotes).start(0);
+      }, proceduralNotes.map(note => ({
+        time: note.time + GLOBAL_START_DELAY,
+        note: note.name,
+        duration: note.duration
+      }))).start(0);
       
       midiSequence.current.loop = true;
-      midiSequence.current.loopEnd = GLOBAL_START_DELAY + 4;
+      midiSequence.current.loopEnd = GLOBAL_START_DELAY + (proceduralNotes.length * 0.5);
     }
+  };
+
+  const handlePlayPause = async () => {
+    if (Tone.context.state !== 'running') {
+      await Tone.start();
+    }
+    
+    if (isPlaying) {
+      Tone.Transport.pause();
+    } else {
+      // Start transport with consistent global delay
+      Tone.Transport.start(`+${GLOBAL_START_DELAY}`);
+      
+      if (!midiLoaded && !midiSequence.current) {
+        playProceduralPattern();
+      }
+    }
+    setIsPlaying(!isPlaying);
   };
 
   const handleStop = () => {
@@ -161,7 +156,7 @@ const Index = () => {
         id: `midi-${index}`,
         note: normalizeNoteName(note.name),
         duration: note.duration,
-        time: note.time + GLOBAL_START_DELAY // Use consistent global delay
+        time: note.time + GLOBAL_START_DELAY
       }));
       
       notesRef.current = convertedNotes;
