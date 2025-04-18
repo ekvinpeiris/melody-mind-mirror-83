@@ -1,8 +1,7 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
- 
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -66,7 +65,7 @@
     --ring: 0 72.2% 50.6%;
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;
@@ -81,11 +80,10 @@
     transform: translateY(-100vh);
   }
   to {
-    transform: translateY(0);
+    transform: translateY(calc(100vh - 200px));
   }
 }
 
-/* New animation for falling notes */
 @keyframes fall-note {
   0% {
     transform: translateY(-100vh);
@@ -95,20 +93,19 @@
     opacity: 0.8;
   }
   100% {
-    transform: translateY(100vh - 48px); /* Ensure it stops at the piano keys */
+    transform: translateY(100vh - 48px);
     opacity: 0;
   }
 }
 
-/* Apply the animation to falling note elements */
 .falling-note {
   animation-name: fall;
   animation-timing-function: linear;
   animation-fill-mode: forwards;
-  transform: translateY(-100vh); /* Start offscreen */
+  transform: translateY(-100vh);
+  will-change: transform;
 }
 
-/* Piano-specific animations */
 @keyframes key-press {
   0% {
     transform: translateY(0);
