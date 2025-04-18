@@ -87,12 +87,13 @@
   85% {
     opacity: 0.8;
   }
-  95% {
-    transform: translateY(calc(100vh - 205px)); /* Position at the exact top of piano keys */
+  99% {
+    transform: translateY(calc(100vh - 195px)); /* Position precisely above piano keys */
+    opacity: 1;
   }
   100% {
-    transform: translateY(calc(100vh - 192px)); /* Position precisely at piano keys */
-    opacity: 1; /* Make more visible at the end for better hit feedback */
+    transform: translateY(calc(100vh - 192px)); /* Final position exactly at piano keys */
+    opacity: 1;
   }
 }
 
@@ -143,7 +144,7 @@
   animation: key-press 0.2s ease-out;
 }
 
-/* New perfect hit animations */
+/* Perfect hit animations */
 .perfect-hit {
   animation: perfect-hit 0.3s ease-out;
   filter: brightness(2) !important;

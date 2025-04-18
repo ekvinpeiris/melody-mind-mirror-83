@@ -13,12 +13,8 @@ type FallingNoteProps = {
 
 const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
   ({ note, isBlackKey, duration, position, isActive, timeUntilHit }, ref) => {
-    const [animationDuration, setAnimationDuration] = useState(4);
-    
-    useEffect(() => {
-      // Fixed animation duration for predictable timing
-      setAnimationDuration(4);
-    }, [duration]);
+    // Fixed animation duration for better predictability
+    const animationDuration = 4;
     
     const getColor = () => {
       if (isBlackKey) return 'bg-orange-400';
@@ -40,7 +36,7 @@ const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
     const xPosition = position - (noteWidth / 2); // Center the note over the key
 
     // More precise hit window calculation - when note is exactly at the key position
-    const hitWindow = 0.12; // 120ms hit window - more precise
+    const hitWindow = 0.15; // 150ms hit window - more forgiving
     const isAboutToHit = timeUntilHit !== undefined && 
                          timeUntilHit <= hitWindow && 
                          timeUntilHit > -hitWindow;
