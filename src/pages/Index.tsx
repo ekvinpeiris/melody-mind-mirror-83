@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import * as Tone from 'tone';
 import PianoKeyboard from '@/components/PianoKeyboard';
+import { Play, Pause, Square, Upload } from 'lucide-react';
 
 const Index = () => {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [tempo, setTempo] = React.useState(120);
   const [activeNotes, setActiveNotes] = React.useState<string[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handlePlayPause = async () => {
     if (Tone.context.state !== 'running') {
@@ -23,19 +25,25 @@ const Index = () => {
     setIsPlaying(!isPlaying);
   };
 
+  const handleStop = () => {
+    Tone.Transport.stop();
+    setIsPlaying(false);
+    setActiveNotes([]);
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // We'll implement MIDI file handling in the next iteration
+    console.log('MIDI file selected:', file);
+  };
+
   React.useEffect(() => {
-    // Set the initial tempo
     Tone.Transport.bpm.value = tempo;
-    
-    // Cleanup on component unmount
     return () => {
       Tone.Transport.stop();
     };
-  }, []);
-
-  // Update tempo when slider changes
-  React.useEffect(() => {
-    Tone.Transport.bpm.value = tempo;
   }, [tempo]);
 
   return (
@@ -44,26 +52,52 @@ const Index = () => {
       
       <div className="w-full max-w-3xl bg-gray-800 p-6 rounded-lg shadow-lg">
         {/* Piano visualization area */}
-        <div className="h-60 bg-gray-700 rounded mb-4 flex items-end justify-center overflow-hidden">
-          <div className="text-center p-4">
-            Note visualization will appear here
-          </div>
+        <div className="h-60 bg-gray-700 rounded mb-4 overflow-hidden relative">
+          {/* This is where falling notes will appear */}
         </div>
         
         {/* Piano keyboard */}
-        <div className="mb-4 overflow-x-auto">
+        <div className="mb-4 overflow-x-auto bg-gray-900 p-4 rounded-lg">
           <PianoKeyboard activeNotes={activeNotes} />
         </div>
         
         {/* Controls */}
         <div className="flex flex-col gap-4">
           <div className="flex justify-between items-center">
-            <Button 
-              onClick={handlePlayPause}
-              className="bg-blue-500 hover:bg-blue-600"
-            >
-              {isPlaying ? 'Pause' : 'Play'}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handlePlayPause}
+                variant="default"
+                size="icon"
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              
+              <Button 
+                onClick={handleStop}
+                variant="secondary"
+                size="icon"
+              >
+                <Square className="h-4 w-4" />
+              </Button>
+
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+                className="flex gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                Upload MIDI
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".mid,.midi"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </div>
             
             <div className="flex items-center gap-4">
               <span className="text-sm">Tempo: {tempo} BPM</span>
@@ -79,10 +113,6 @@ const Index = () => {
             </div>
           </div>
         </div>
-      </div>
-      
-      <div className="mt-8 text-sm text-gray-400">
-        <p>Use this application to learn and practice music!</p>
       </div>
     </div>
   );
