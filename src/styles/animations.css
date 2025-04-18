@@ -4,6 +4,13 @@
     transform: translateY(-100%);
   }
   to {
-    transform: translateY(100%);
+    transform: translateY(100vh);
   }
+}
+
+.piano-grid {
+  background-size: 50px 50px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
 }

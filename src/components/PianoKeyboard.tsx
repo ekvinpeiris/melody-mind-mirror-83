@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import PianoKey from './PianoKey';
 import FallingNote from './FallingNote';
@@ -29,7 +28,18 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   
   // Initialize synth
   useEffect(() => {
-    synth.current = new Tone.PolySynth(Tone.Synth).toDestination();
+    const sampler = new Tone.Sampler({
+      urls: {
+        C4: "C4.mp3",
+        "D#4": "Ds4.mp3",
+        "F#4": "Fs4.mp3",
+        A4: "A4.mp3",
+      },
+      release: 1,
+      baseUrl: "https://tonejs.github.io/audio/salamander/",
+    }).toDestination();
+
+    synth.current = sampler;
     
     return () => {
       if (synth.current) {
@@ -73,27 +83,41 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   }, []);
   
   return (
-    <div className="relative h-60 overflow-hidden">
+    <div className="fixed inset-0 bg-gray-900 flex flex-col">
       {/* Falling notes visualization area */}
-      <div className="absolute inset-0 z-0">
-        {isPlaying && fallingNotes.map((fallingNote) => {
-          const isBlack = fallingNote.note.includes('#');
-          return (
-            <FallingNote
-              key={fallingNote.id}
-              note={fallingNote.note}
-              isBlackKey={isBlack}
-              duration={fallingNote.duration}
-              position={keyPositions[fallingNote.note] || 0}
-            />
-          );
-        })}
+      <div className="flex-1 relative overflow-hidden bg-[#1a1a1a]">
+        <div className="absolute inset-0">
+          {/* Grid lines */}
+          <div className="absolute inset-0 grid grid-cols-12 opacity-10">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="border-l border-white h-full" />
+            ))}
+          </div>
+          {/* Horizontal time markers */}
+          <div className="absolute inset-0 grid grid-rows-8 opacity-10">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="border-t border-white w-full" />
+            ))}
+          </div>
+          {isPlaying && fallingNotes.map((fallingNote) => {
+            const isBlack = fallingNote.note.includes('#');
+            return (
+              <FallingNote
+                key={fallingNote.id}
+                note={fallingNote.note}
+                isBlackKey={isBlack}
+                duration={fallingNote.duration}
+                position={keyPositions[fallingNote.note] || 0}
+              />
+            );
+          })}
+        </div>
       </div>
       
       {/* Piano keyboard */}
       <div 
         ref={keyboardRef}
-        className="absolute bottom-0 flex justify-center w-full"
+        className="h-48 bg-gray-800 flex justify-center"
       >
         <div className="flex">
           {allNotes.map(({ id, isBlackKey }, index) => (
