@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -82,4 +83,21 @@
   to {
     transform: translateY(0);
   }
+}
+
+/* Piano-specific animations */
+@keyframes key-press {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.key-pressed {
+  animation: key-press 0.2s ease-out;
 }

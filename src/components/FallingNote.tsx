@@ -6,18 +6,22 @@ type FallingNoteProps = {
   note: string;
   isBlackKey: boolean;
   duration: number;
+  position: number; // Horizontal position
 };
 
-const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration }) => {
+const FallingNote: React.FC<FallingNoteProps> = ({ note, isBlackKey, duration, position }) => {
   return (
     <div
       className={cn(
-        'absolute bottom-0 rounded-t-sm transition-transform',
-        isBlackKey ? 'w-8 bg-gray-800' : 'w-14 bg-white border-x border-gray-300',
+        'absolute rounded-t-sm transition-transform',
+        isBlackKey ? 'bg-gray-800' : 'bg-blue-200 border-x border-gray-300',
       )}
       style={{
         height: `${duration * 100}px`,
+        width: isBlackKey ? '32px' : '56px',
+        left: `${position}px`,
         animation: `fall ${duration}s linear`,
+        opacity: 0.8,
       }}
     />
   );
