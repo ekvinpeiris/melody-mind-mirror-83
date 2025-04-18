@@ -23,8 +23,8 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   fallingNotes = [],
   isPlaying = false
 }) => {
-  // Update the type to be more generic to accept different Tone.js instruments
-  const synth = useRef<Tone.Instrument | null>(null);
+  // Use a more specific type that works with both Synth and Sampler
+  const synth = useRef<Tone.Sampler | null>(null);
   const keyboardRef = useRef<HTMLDivElement>(null);
   const [keyPositions, setKeyPositions] = useState<Record<string, number>>({});
   
