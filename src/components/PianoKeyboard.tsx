@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import PianoKey from './PianoKey';
 import FallingNote from './FallingNote';
@@ -22,7 +23,8 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   fallingNotes = [],
   isPlaying = false
 }) => {
-  const synth = useRef<Tone.PolySynth | null>(null);
+  // Update the type to be more generic to accept different Tone.js instruments
+  const synth = useRef<Tone.Instrument | null>(null);
   const keyboardRef = useRef<HTMLDivElement>(null);
   const [keyPositions, setKeyPositions] = useState<Record<string, number>>({});
   
@@ -68,6 +70,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   
   const playNote = (note: string) => {
     if (synth.current) {
+      // Use the proper method to trigger the note
       synth.current.triggerAttackRelease(note, "8n");
     }
   };
