@@ -85,6 +85,21 @@
   }
 }
 
+/* New animation for falling notes */
+@keyframes fall-note {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0.7;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(calc(100vh - 48px)); /* Ensure it stops at the piano keys */
+    opacity: 0;
+  }
+}
+
 /* Piano-specific animations */
 @keyframes key-press {
   0% {

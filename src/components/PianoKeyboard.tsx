@@ -26,6 +26,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   // Use a more specific type that works with both Synth and Sampler
   const synth = useRef<Tone.Sampler | null>(null);
   const keyboardRef = useRef<HTMLDivElement>(null);
+  const visualizerRef = useRef<HTMLDivElement>(null);
   const [keyPositions, setKeyPositions] = useState<Record<string, number>>({});
   const [visibleNotes, setVisibleNotes] = useState<Array<{
     id: string;
@@ -87,7 +88,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   useEffect(() => {
     if (keyboardRef.current) {
       const positions: Record<string, number> = {};
-      const keys = keyboardRef.current.querySelectorAll('[data-position]');
+      const keys = keyboardRef.current.querySelectorAll('[data-note]');
       
       keys.forEach((key) => {
         const note = key.getAttribute('data-note') || '';
@@ -103,40 +104,28 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   
   // Update visible notes based on current playback
   useEffect(() => {
-    if (isPlaying && fallingNotes.length > 0) {
-      // Process notes for visibility based on current time
-      const now = Tone.Transport.seconds;
-      const noteWindow = 4; // Show notes 4 seconds ahead
-      
-      const currentVisibleNotes = fallingNotes.map(note => {
-        const timeUntilNote = note.time - now;
-        return {
-          ...note,
-          visible: timeUntilNote < noteWindow && timeUntilNote > -note.duration
-        };
-      });
-      
-      setVisibleNotes(currentVisibleNotes);
-    } else {
-      setVisibleNotes([]);
-    }
-    
-    // Update visible notes every 100ms while playing
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (isPlaying) {
-      interval = setInterval(() => {
+    // Process visible notes when either isPlaying changes or fallingNotes changes
+    const updateVisibleNotes = () => {
+      if (isPlaying && fallingNotes.length > 0) {
         const now = Tone.Transport.seconds;
         const noteWindow = 4; // Show notes 4 seconds ahead
         
-        setVisibleNotes(fallingNotes.map(note => {
+        const currentVisibleNotes = fallingNotes.map(note => {
           const timeUntilNote = note.time - now;
           return {
             ...note,
             visible: timeUntilNote < noteWindow && timeUntilNote > -note.duration
           };
-        }));
-      }, 100);
-    }
+        });
+        
+        setVisibleNotes(currentVisibleNotes);
+      }
+    };
+    
+    updateVisibleNotes();
+    
+    // Update visible notes every 100ms while playing
+    const interval = isPlaying ? setInterval(updateVisibleNotes, 100) : null;
     
     return () => {
       if (interval) clearInterval(interval);
@@ -163,21 +152,22 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   return (
     <div className="fixed inset-0 bg-gray-900 flex flex-col">
       {/* Falling notes visualization area */}
-      <div className="flex-1 relative overflow-hidden bg-[#1a1a1a]">
+      <div ref={visualizerRef} className="flex-1 relative overflow-hidden bg-[#1a1a1a]">
+        {/* Grid lines */}
+        <div className="absolute inset-0 grid grid-cols-12 opacity-10">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="border-l border-white h-full" />
+          ))}
+        </div>
+        {/* Horizontal time markers */}
+        <div className="absolute inset-0 grid grid-rows-8 opacity-10">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="border-t border-white w-full" />
+          ))}
+        </div>
+        
+        {/* Falling notes container */}
         <div className="absolute inset-0">
-          {/* Grid lines */}
-          <div className="absolute inset-0 grid grid-cols-12 opacity-10">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="border-l border-white h-full" />
-            ))}
-          </div>
-          {/* Horizontal time markers */}
-          <div className="absolute inset-0 grid grid-rows-8 opacity-10">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="border-t border-white w-full" />
-            ))}
-          </div>
-          
           {visibleNotes.filter(note => note.visible).map((fallingNote) => {
             const isBlack = fallingNote.note.includes('#');
             return (
@@ -196,7 +186,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       {/* Piano keyboard */}
       <div 
         ref={keyboardRef}
-        className="h-48 bg-gray-800 flex justify-center"
+        className="h-48 bg-gray-800 flex justify-center z-10"
       >
         <div className="flex">
           {allNotes.map(({ id, isBlackKey }, index) => (
