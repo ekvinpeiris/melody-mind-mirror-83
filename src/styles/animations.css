@@ -1,13 +1,4 @@
 
-@keyframes fall {
-  from {
-    transform: translateY(-100%);
-  }
-  to {
-    transform: translateY(100vh);
-  }
-}
-
 .piano-grid {
   background-size: 50px 50px;
   background-image:
