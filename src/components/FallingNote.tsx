@@ -7,15 +7,15 @@ type FallingNoteProps = {
   isBlackKey: boolean;
   duration: number;
   position: number;
+  visualizerHeight: number;
+  timeUntilHit: number;
   isActive?: boolean;
-  timeUntilHit?: number;
 };
 
+const FALL_DURATION_SECONDS = 5;
+
 const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
-  ({ note, isBlackKey, duration, position, isActive, timeUntilHit }, ref) => {
-    // Increased animation duration for better visibility
-    const animationDuration = 5; // 5 seconds gives more time to see and prepare
-    
+  ({ note, isBlackKey, duration, position, isActive, timeUntilHit, visualizerHeight }, ref) => {
     const getColor = () => {
       if (isBlackKey) return 'bg-orange-400';
       const noteName = note.charAt(0);
@@ -49,7 +49,7 @@ const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
       <div
         ref={ref}
         className={cn(
-          'rounded-sm opacity-80 falling-note',
+          'rounded-sm opacity-80', // Removed 'falling-note'
           getColor(),
           isActive && 'note-hit',
           isAboutToHit && 'border-2 border-white',
@@ -59,14 +59,21 @@ const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
           height: `${duration * 100}px`,
           width: `${noteWidth}px`,
           left: `${xPosition}px`,
-          animationDuration: `${animationDuration}s`,
           zIndex: isBlackKey ? 10 : 5,
-          // Remove animation delay to synchronize with playback
-          animationDelay: '0s',
-          willChange: 'transform'
+          willChange: 'transform',
+          transform: `translateY(${(() => {
+            // If timeUntilHit > FALL_DURATION_SECONDS, note is at 0px (top, effectively waiting)
+            if (timeUntilHit > FALL_DURATION_SECONDS) {
+              return '0px';
+            }
+            // For timeUntilHit <= FALL_DURATION_SECONDS (including negative values for missed notes):
+            // Calculate progress: 0% at FALL_DURATION_SECONDS, 100% at 0s, >100% for negative timeUntilHit.
+            const progress = (FALL_DURATION_SECONDS - timeUntilHit) / FALL_DURATION_SECONDS;
+            return `${progress * visualizerHeight}px`;
+          })()})`
         }}
         data-note={note}
-        data-time-until-hit={timeUntilHit?.toFixed(3)}
+        data-time-until-hit={timeUntilHit.toFixed(3)}
         data-hit-window={hitWindow.toFixed(3)}
         data-is-hit-window={isAboutToHit ? 'true' : 'false'}
       />

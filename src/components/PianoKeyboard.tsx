@@ -39,6 +39,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   const noteRefs = useRef<Record<string, HTMLDivElement>>({});
   
   const [keyPositions, setKeyPositions] = useState<Record<string, number>>({});
+  const [visualizerHeight, setVisualizerHeight] = useState(0);
   const [visibleNotes, setVisibleNotes] = useState<VisibleNote[]>([]);
   const [hitStatus, setHitStatus] = useState<Record<string, boolean>>({});
   const [perfectHits, setPerfectHits] = useState<Record<string, boolean>>({});
@@ -114,9 +115,12 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     };
   }, []);
   
-  // Calculate key positions for falling notes
+  // Calculate key positions and visualizer height
   useEffect(() => {
-    if (keyboardRef.current) {
+    if (keyboardRef.current && visualizerRef.current) {
+      // Measure visualizer height
+      setVisualizerHeight(visualizerRef.current.offsetHeight);
+
       const positions: Record<string, number> = {};
       const keys = keyboardRef.current.querySelectorAll('[data-note]');
       
@@ -191,7 +195,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       
       if (isPlayingRef.current && fallingNotesRef.current.length > 0) {
         const now = Tone.Transport.seconds;
-        const noteWindow = 6; // Show notes 6 seconds ahead - synchronized with fall animation duration
+        const noteWindow = 5; // Synchronized with FALL_DURATION_SECONDS in FallingNote.tsx
         
         // Calculate which notes should be visible
         const currentVisibleNotes: VisibleNote[] = fallingNotesRef.current
@@ -353,6 +357,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                   position={keyPositions[fallingNote.note] || 0}
                   isActive={isActive}
                   timeUntilHit={fallingNote.timeUntilHit}
+                  visualizerHeight={visualizerHeight}
                 />
               );
           })}
