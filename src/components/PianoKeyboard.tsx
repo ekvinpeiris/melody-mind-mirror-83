@@ -14,6 +14,7 @@ type PianoKeyboardProps = {
     note: string;
     duration: number;
     time: number;
+    isDummy?: boolean; // Added to reflect incoming prop structure
   }>;
   isPlaying?: boolean;
 };
@@ -25,6 +26,7 @@ type VisibleNote = {
   time: number;
   visible: boolean;
   timeUntilHit: number;
+  isDummy?: boolean; // Added for internal state
 };
 
 const PianoKeyboard: React.FC<PianoKeyboardProps> = ({ 
@@ -32,6 +34,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   fallingNotes = [],
   isPlaying = false
 }) => {
+  // Removed console.log('[PianoKeyboard] Rendering');
   const synth = useRef<Tone.Sampler | null>(null);
   const keyboardRef = useRef<HTMLDivElement>(null);
   const visualizerRef = useRef<HTMLDivElement>(null);
@@ -39,10 +42,12 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
   const noteRefs = useRef<Record<string, HTMLDivElement>>({});
   
   const [keyPositions, setKeyPositions] = useState<Record<string, number>>({});
-  const [visualizerHeight, setVisualizerHeight] = useState(0);
+  // Removed visualizerHeight state
   const [visibleNotes, setVisibleNotes] = useState<VisibleNote[]>([]);
   const [hitStatus, setHitStatus] = useState<Record<string, boolean>>({});
   const [perfectHits, setPerfectHits] = useState<Record<string, boolean>>({});
+
+  // Removed console.log('[PianoKeyboard] Current visualizerHeight state:', visualizerHeight);
   
   // Setup refs to prevent rerender loops
   const activeNotesRef = useRef(activeNotes);
@@ -115,11 +120,16 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
     };
   }, []);
   
-  // Calculate key positions and visualizer height
+  // Calculate key positions
   useEffect(() => {
-    if (keyboardRef.current && visualizerRef.current) {
-      // Measure visualizer height
-      setVisualizerHeight(visualizerRef.current.offsetHeight);
+    // Removed console.log('[PianoKeyboard] useEffect for dimensions running');
+    if (keyboardRef.current) { // visualizerRef.current no longer needed here
+      // Removed visualizer height measurement logic
+      // console.log('[PianoKeyboard] visualizerRef.current:', visualizerRef.current);
+      // const height = visualizerRef.current.offsetHeight;
+      // console.log('[PianoKeyboard] Measured visualizerRef.current.offsetHeight:', height);
+      // setVisualizerHeight(height);
+      // console.log('[PianoKeyboard] visualizerHeight state set to:', height);
 
       const positions: Record<string, number> = {};
       const keys = keyboardRef.current.querySelectorAll('[data-note]');
@@ -195,7 +205,7 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
       
       if (isPlayingRef.current && fallingNotesRef.current.length > 0) {
         const now = Tone.Transport.seconds;
-        const noteWindow = 5; // Synchronized with FALL_DURATION_SECONDS in FallingNote.tsx
+        const noteWindow = 5; // This will be used as animationDuration for FallingNote
         
         // Calculate which notes should be visible
         const currentVisibleNotes: VisibleNote[] = fallingNotesRef.current
@@ -207,9 +217,10 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
           .map(note => {
             const timeUntilNote = note.time - now;
             return {
-              ...note,
+              ...note, // Spreads id, note, duration, time, and potentially isDummy
               visible: true,
-              timeUntilHit: timeUntilNote
+              timeUntilHit: timeUntilNote,
+              isDummy: note.isDummy // Explicitly carry over isDummy
             };
           });
         
@@ -356,8 +367,9 @@ const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
                   duration={fallingNote.duration}
                   position={keyPositions[fallingNote.note] || 0}
                   isActive={isActive}
-                  timeUntilHit={fallingNote.timeUntilHit}
-                  visualizerHeight={visualizerHeight}
+                  timeUntilHit={fallingNote.timeUntilHit} 
+                  animationDuration={noteWindow} 
+                  isDummy={fallingNote.isDummy} // Pass isDummy to FallingNote
                 />
               );
           })}

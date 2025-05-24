@@ -7,15 +7,20 @@ type FallingNoteProps = {
   isBlackKey: boolean;
   duration: number;
   position: number;
-  visualizerHeight: number;
-  timeUntilHit: number;
+  animationDuration: number; 
+  timeUntilHit?: number;      
   isActive?: boolean;
+  isDummy?: boolean; // Added for dummy notes
 };
 
-const FALL_DURATION_SECONDS = 5;
+// Removed FALL_DURATION_SECONDS
 
 const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
-  ({ note, isBlackKey, duration, position, isActive, timeUntilHit, visualizerHeight }, ref) => {
+  ({ note, isBlackKey, duration, position, isActive, timeUntilHit, animationDuration, isDummy }, ref) => {
+    if (isDummy) {
+      return null; // Do not render dummy notes
+    }
+
     const getColor = () => {
       if (isBlackKey) return 'bg-orange-400';
       const noteName = note.charAt(0);
@@ -49,7 +54,7 @@ const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
       <div
         ref={ref}
         className={cn(
-          'rounded-sm opacity-80', // Removed 'falling-note'
+          'rounded-sm opacity-80 falling-note', // Added 'falling-note'
           getColor(),
           isActive && 'note-hit',
           isAboutToHit && 'border-2 border-white',
@@ -60,20 +65,15 @@ const FallingNote = forwardRef<HTMLDivElement, FallingNoteProps>(
           width: `${noteWidth}px`,
           left: `${xPosition}px`,
           zIndex: isBlackKey ? 10 : 5,
-          willChange: 'transform',
-          transform: `translateY(${(() => {
-            // If timeUntilHit > FALL_DURATION_SECONDS, note is at 0px (top, effectively waiting)
-            if (timeUntilHit > FALL_DURATION_SECONDS) {
-              return '0px';
-            }
-            // For timeUntilHit <= FALL_DURATION_SECONDS (including negative values for missed notes):
-            // Calculate progress: 0% at FALL_DURATION_SECONDS, 100% at 0s, >100% for negative timeUntilHit.
-            const progress = (FALL_DURATION_SECONDS - timeUntilHit) / FALL_DURATION_SECONDS;
-            return `${progress * visualizerHeight}px`;
-          })()})`
+          // willChange: 'transform', // Can be removed if CSS animation handles it
+          animationDuration: `${animationDuration}s`,
+          animationTimingFunction: 'linear',
+          animationFillMode: 'forwards',
+          animationDelay: '0s', // Start immediately when rendered
+          willChange: 'transform' // Retained for performance
         }}
         data-note={note}
-        data-time-until-hit={timeUntilHit.toFixed(3)}
+        data-time-until-hit={timeUntilHit?.toFixed(3)} // Optional chaining
         data-hit-window={hitWindow.toFixed(3)}
         data-is-hit-window={isAboutToHit ? 'true' : 'false'}
       />

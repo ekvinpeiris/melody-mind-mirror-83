@@ -3,14 +3,17 @@ import { toast } from "@/components/ui/sonner";
 import * as Tone from 'tone';
 import PianoKeyboard from '@/components/PianoKeyboard';
 import TopBar from '@/components/TopBar';
-import { parseMidiFile, getAllNotes, normalizeNoteName } from '@/utils/midiUtils';
+import { parseMidiFile, getAllNotes, normalizeNoteName, insertDummyNotes, MidiNote } from '@/utils/midiUtils'; // Added insertDummyNotes, MidiNote
 import { generateProceduralMidiNotes } from '@/utils/midiNoteGenerator';
+
+const PROCESSED_MIDI_STORAGE_PREFIX = 'processedMidi_';
 
 interface FallingNote {
   id: string;
   note: string;
   duration: number;
   time: number;
+  isDummy?: boolean; // Added to accommodate dummy notes
 }
 
 // Global consistent delay for both audio and visuals
@@ -143,53 +146,124 @@ const Index = () => {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
+    handleStop(); // Stop any current playback
+
+    const storageKey = PROCESSED_MIDI_STORAGE_PREFIX + file.name;
+
+    // 1. Attempt to load from Local Storage
     try {
-      handleStop();
-      
+      const storedData = localStorage.getItem(storageKey);
+      if (storedData) {
+        console.log('Found processed MIDI data in Local Storage for:', file.name);
+        const loadedRawNotes: MidiNote[] = JSON.parse(storedData); // MidiNote from midiUtils
+
+        if (Array.isArray(loadedRawNotes)) {
+          // Map to FallingNote structure for the state
+          const loadedFallingNotesData = loadedRawNotes.map((note, index) => ({
+            id: `midi-loaded-${index}-${note.isDummy ? 'dummy' : 'real'}`,
+            note: note.isDummy ? note.name : normalizeNoteName(note.name),
+            duration: note.duration,
+            time: note.time + GLOBAL_START_DELAY, // Apply global delay consistently
+            isDummy: note.isDummy,
+          }));
+
+          notesRef.current = loadedFallingNotesData;
+          setFallingNotes(loadedFallingNotesData);
+          setMidiName(file.name);
+
+          if (midiSequence.current) {
+            midiSequence.current.dispose();
+          }
+
+          if (pianoSampler.current) {
+            const playableNotes = loadedRawNotes
+              .filter(note => !note.isDummy)
+              .map(note => ({
+                time: note.time + GLOBAL_START_DELAY, // Apply global delay
+                note: normalizeNoteName(note.name),
+                duration: note.duration,
+              }));
+            
+            midiSequence.current = new Tone.Part((time, noteEvent) => {
+              pianoSampler.current?.triggerAttackRelease(noteEvent.note, noteEvent.duration, time);
+              Tone.Draw.schedule(() => {
+                setActiveNotes(prev => [...prev, noteEvent.note]);
+                setTimeout(() => setActiveNotes(prev => prev.filter(n => n !== noteEvent.note)), noteEvent.duration * 1000);
+              }, time);
+            }, playableNotes).start(0);
+          }
+
+          setMidiLoaded(true);
+          toast.info(`Loaded pre-processed MIDI: "${file.name}" from cache.`);
+          return; // Skip normal processing
+        } else {
+          console.warn('Invalid data structure in Local Storage for:', file.name);
+          localStorage.removeItem(storageKey); // Clean up invalid data
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load or parse processed MIDI from Local Storage:', error);
+      if (storageKey) localStorage.removeItem(storageKey); // Clean up potentially corrupted data
+    }
+
+    // 2. If not loaded from Local Storage, proceed with normal parsing and processing
+    try {
+      console.log('Parsing MIDI file:', file.name);
       const parsedMidi = await parseMidiFile(file);
       setMidiName(parsedMidi.name);
       
-      const allNotes = getAllNotes(parsedMidi);
+      const allNotesFromMidi = getAllNotes(parsedMidi);
+      const notesWithDummies = insertDummyNotes(allNotesFromMidi); // This is of type MidiNote[]
+
+      // Save to Local Storage
+      try {
+        const jsonData = JSON.stringify(notesWithDummies);
+        localStorage.setItem(storageKey, jsonData);
+        console.log('Saved processed MIDI data to Local Storage for:', file.name);
+      } catch (storageError) {
+        console.warn('Could not save processed MIDI to Local Storage:', storageError);
+      }
       
-      const convertedNotes = allNotes.map((note, index) => ({
-        id: `midi-${index}`,
-        note: normalizeNoteName(note.name),
+      const fallingNotesData = notesWithDummies.map((note, index) => ({
+        id: `midi-parsed-${index}-${note.isDummy ? 'dummy' : 'real'}`,
+        note: note.isDummy ? note.name : normalizeNoteName(note.name),
         duration: note.duration,
-        time: note.time + GLOBAL_START_DELAY
+        time: note.time + GLOBAL_START_DELAY,
+        isDummy: note.isDummy,
       }));
       
-      notesRef.current = convertedNotes;
-      setFallingNotes(convertedNotes);
+      notesRef.current = fallingNotesData;
+      setFallingNotes(fallingNotesData);
       
       if (midiSequence.current) {
         midiSequence.current.dispose();
       }
       
       if (pianoSampler.current) {
-        midiSequence.current = new Tone.Part((time, note) => {
-          pianoSampler.current?.triggerAttackRelease(note.note, note.duration, time);
-          
+        const playableNotes = notesWithDummies
+          .filter(note => !note.isDummy)
+          .map(note => ({
+            time: note.time + GLOBAL_START_DELAY,
+            note: normalizeNoteName(note.name),
+            duration: note.duration,
+          }));
+
+        midiSequence.current = new Tone.Part((time, noteEvent) => {
+          pianoSampler.current?.triggerAttackRelease(noteEvent.note, noteEvent.duration, time);
           Tone.Draw.schedule(() => {
-            setActiveNotes(prev => [...prev, note.note]);
-            
-            setTimeout(() => {
-              setActiveNotes(prev => prev.filter(n => n !== note.note));
-            }, note.duration * 1000);
+            setActiveNotes(prev => [...prev, noteEvent.note]);
+            setTimeout(() => setActiveNotes(prev => prev.filter(n => n !== noteEvent.note)), noteEvent.duration * 1000);
           }, time);
-        }, convertedNotes.map(note => ({
-          time: note.time,
-          note: note.note,
-          duration: note.duration
-        }))).start(0);
+        }, playableNotes).start(0);
       }
       
       setMidiLoaded(true);
-      toast.success(`MIDI file "${parsedMidi.name}" loaded successfully!`);
+      toast.success(`MIDI file "${parsedMidi.name}" loaded and processed successfully!`);
       
     } catch (error) {
-      console.error('Error parsing MIDI file:', error);
-      toast.error('Failed to parse MIDI file. Is it a valid MIDI file?');
+      console.error('Error processing MIDI file:', error);
+      toast.error('Failed to process MIDI file. Is it a valid MIDI file?');
     }
   };
 
@@ -208,7 +282,7 @@ const Index = () => {
           <div className="w-full bg-gray-800 rounded-lg shadow-lg overflow-hidden">
             <PianoKeyboard 
               activeNotes={activeNotes} 
-              fallingNotes={fallingNotes}
+              fallingNotes={fallingNotes} // Pass directly, as `fallingNotes` state now matches the extended interface
               isPlaying={isPlaying} 
             />
           </div>
